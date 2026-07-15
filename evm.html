@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#080d1d">
+    <meta name="description" content="Live EVM block, gas, faucet, and JSON-RPC status for IPI Testnet chain 42424.">
+    <title>IPI EVM View — Testnet</title>
+    <link rel="icon" href="https://scan.ipi.io/ipi-logo.svg?v=official-x-20260715" type="image/svg+xml">
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #080d1d;
+        --bg-soft: #0d1428;
+        --panel: rgba(17, 26, 48, 0.88);
+        --panel-solid: #111a30;
+        --panel-hover: #16223d;
+        --ink: #f5f7ff;
+        --muted: #98a4bc;
+        --faint: #68758f;
+        --line: rgba(154, 174, 216, 0.14);
+        --line-strong: rgba(154, 174, 216, 0.24);
+        --accent: #ff405b;
+        --accent-soft: rgba(255, 64, 91, 0.13);
+        --cyan: #32c5ff;
+        --cyan-soft: rgba(50, 197, 255, 0.13);
+        --purple: #d557ff;
+        --purple-soft: rgba(213, 87, 255, 0.12);
+        --green: #47d99d;
+        --green-soft: rgba(71, 217, 157, 0.12);
+        --amber: #ffc35a;
+        --amber-soft: rgba(255, 195, 90, 0.13);
+        --bad: #ff6b75;
+        --sidebar: 250px;
+        --radius-xl: 26px;
+        --radius-lg: 20px;
+        --radius-md: 14px;
+        --shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+      }
+
+      * { box-sizing: border-box; }
+      html { min-width: 320px; background: var(--bg); scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: hidden;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 82% -12%, rgba(213, 87, 255, 0.14), transparent 32%),
+          radial-gradient(circle at 0 92%, rgba(50, 197, 255, 0.12), transparent 30%),
+          var(--bg);
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 15px;
+        -webkit-font-smoothing: antialiased;
+      }
+      button { font: inherit; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      a { color: inherit; }
+
+      .ambient {
+        position: fixed;
+        z-index: 0;
+        width: 420px;
+        height: 420px;
+        border-radius: 999px;
+        filter: blur(100px);
+        opacity: 0.18;
+        pointer-events: none;
+      }
+      .ambient-one { top: -220px; right: 12%; background: var(--purple); }
+      .ambient-two { bottom: -250px; left: 5%; background: var(--cyan); }
+
+      .evm-shell {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: var(--sidebar) minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .evm-sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 30;
+        display: flex;
+        width: var(--sidebar);
+        flex-direction: column;
+        padding: 24px 18px;
+        border-right: 1px solid var(--line);
+        background: rgba(8, 13, 29, 0.86);
+        backdrop-filter: blur(22px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 5px 7px 25px;
+        color: var(--ink);
+        text-decoration: none;
+      }
+      .brand-mark { display: grid; width: 46px; height: 46px; flex: 0 0 auto; place-items: center; }
+      .brand-mark img {
+        display: block;
+        width: 46px;
+        height: 46px;
+        object-fit: contain;
+      }
+      .brand strong { display: block; font-size: 20px; letter-spacing: -0.03em; }
+      .brand small {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .main-nav { display: grid; gap: 6px; }
+      .main-nav a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 13px;
+        border: 1px solid transparent;
+        border-radius: 13px;
+        color: var(--muted);
+        font-weight: 650;
+        text-decoration: none;
+        transition: 160ms ease;
+      }
+      .main-nav a:hover,
+      .main-nav a:focus-visible {
+        border-color: var(--line);
+        background: rgba(255, 255, 255, 0.035);
+        color: var(--ink);
+      }
+      .main-nav a.active {
+        border-color: rgba(255, 64, 91, 0.2);
+        background: var(--accent-soft);
+        color: var(--ink);
+      }
+      .nav-icon { display: grid; width: 26px; height: 26px; flex: 0 0 auto; place-items: center; font-size: 19px; }
+
+      .sidebar-card {
+        display: grid;
+        gap: 6px;
+        margin-top: auto;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: linear-gradient(145deg, rgba(50, 197, 255, 0.08), rgba(213, 87, 255, 0.06));
+      }
+      .network-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+      .live-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        flex: 0 0 auto;
+        border-radius: 99px;
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(71, 217, 157, 0.1), 0 0 18px rgba(71, 217, 157, 0.55);
+      }
+      .live-dot.warn { background: var(--amber); box-shadow: 0 0 16px rgba(255, 195, 90, 0.45); }
+      .live-dot.bad { background: var(--bad); box-shadow: 0 0 16px rgba(255, 107, 117, 0.45); }
+      .sidebar-card strong {
+        margin-top: 4px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 24px;
+      }
+      .sidebar-card small { color: var(--faint); }
+      .sidebar-links { display: flex; justify-content: space-between; margin-top: 17px; padding: 0 4px; }
+      .sidebar-links a { color: var(--muted); font-size: 12px; text-decoration: none; }
+      .sidebar-links a:hover { color: var(--cyan); }
+
+      .evm-workspace { grid-column: 2; min-width: 0; }
+      .evm-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        min-height: 78px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 14px clamp(20px, 4vw, 52px);
+        border-bottom: 1px solid var(--line);
+        background: rgba(8, 13, 29, 0.74);
+        backdrop-filter: blur(22px);
+      }
+      .topbar-copy { min-width: 0; }
+      .topbar-copy strong { display: block; font-size: 15px; }
+      .topbar-copy small {
+        display: block;
+        margin-top: 3px;
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .topbar-actions { display: flex; align-items: center; gap: 10px; }
+      .topbar-state { display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; font-weight: 700; }
+      .topbar-link {
+        padding: 10px 13px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .topbar-link:hover { border-color: var(--line-strong); color: var(--ink); }
+
+      .evm-menu-button {
+        display: none;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 auto;
+        padding: 11px 10px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel-solid);
+        cursor: pointer;
+      }
+      .evm-menu-button span { display: block; height: 2px; margin: 4px 0; border-radius: 2px; background: var(--ink); }
+
+      .evm-main {
+        width: min(1360px, 100%);
+        margin: 0 auto;
+        padding: 38px clamp(20px, 4vw, 52px) 56px;
+      }
+      .hero, .card {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(16px);
+      }
+      .hero {
+        position: relative;
+        display: grid;
+        gap: 24px;
+        overflow: hidden;
+        padding: clamp(24px, 4vw, 42px);
+        border-radius: var(--radius-xl);
+        background:
+          linear-gradient(145deg, rgba(255, 64, 91, 0.08), transparent 42%),
+          linear-gradient(320deg, rgba(50, 197, 255, 0.08), transparent 38%),
+          var(--panel);
+      }
+      .hero::after {
+        position: absolute;
+        right: -90px;
+        bottom: -160px;
+        width: 360px;
+        height: 360px;
+        border: 1px solid rgba(213, 87, 255, 0.18);
+        border-radius: 999px;
+        box-shadow: 0 0 100px rgba(213, 87, 255, 0.12);
+        content: "";
+        pointer-events: none;
+      }
+      .hero-grid {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(380px, 0.95fr);
+        gap: clamp(24px, 5vw, 64px);
+        align-items: end;
+      }
+      .hero-copy { display: grid; gap: 18px; }
+      .hero-copy > p { max-width: 65ch; font-size: 16px; }
+      .eyebrow, .status, .pill {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 11px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.035);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .eyebrow {
+        border-color: rgba(255, 64, 91, 0.2);
+        background: var(--accent-soft);
+        color: #ff8a9a;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+      .status::before {
+        width: 8px;
+        height: 8px;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: var(--faint);
+        content: "";
+      }
+      .status.good::before { background: var(--green); box-shadow: 0 0 12px rgba(71, 217, 157, 0.55); }
+      .status.warn::before { background: var(--amber); }
+      .status.bad::before { background: var(--bad); }
+      h1, h2 { margin: 0; color: var(--ink); letter-spacing: -0.035em; line-height: 1.08; }
+      h1 { max-width: 12ch; font-size: clamp(2.7rem, 6vw, 5.2rem); }
+      h2 { font-size: clamp(1.25rem, 2vw, 1.65rem); }
+      p { margin: 0; color: var(--muted); line-height: 1.65; }
+
+      .metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .metric {
+        min-width: 0;
+        padding: 17px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: rgba(3, 7, 17, 0.35);
+      }
+      .metric-label {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--faint);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .metric-value {
+        overflow: hidden;
+        color: var(--ink);
+        font-size: clamp(1.2rem, 3vw, 1.7rem);
+        font-weight: 800;
+        line-height: 1.15;
+        text-overflow: ellipsis;
+      }
+      .metric-sub { margin-top: 7px; color: var(--faint); font-size: 11px; }
+      .pillset { display: flex; flex-wrap: wrap; gap: 10px; position: relative; z-index: 1; }
+
+      .evm-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+      }
+      .card { min-width: 0; padding: 22px; border-radius: var(--radius-lg); }
+      .card.wide { grid-column: 1 / -1; }
+      .card > p { margin-top: 8px; font-size: 13px; }
+      .meta { display: grid; gap: 12px; margin-top: 18px; }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .row:last-child { padding-bottom: 0; border-bottom: 0; }
+      .label { color: var(--faint); font-size: 12px; }
+      .value { max-width: 65%; color: var(--ink); font-size: 13px; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+      .mono { font-family: "SFMono-Regular", Consolas, monospace; }
+      .small { font-size: 11px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+      a.link {
+        display: inline-flex;
+        min-height: 40px;
+        align-items: center;
+        justify-content: center;
+        padding: 9px 14px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.025);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+        text-decoration: none;
+      }
+      a.link:hover { border-color: var(--line-strong); color: var(--ink); }
+      a.link.primary { border-color: transparent; background: linear-gradient(135deg, var(--accent), #df2b83); color: white; }
+
+      .evm-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 24px clamp(20px, 4vw, 52px) 34px;
+        border-top: 1px solid var(--line);
+        color: var(--faint);
+        font-size: 11px;
+      }
+      .evm-footer a { color: var(--muted); text-decoration: none; }
+      .evm-scrim { display: none; }
+
+      @media (max-width: 1180px) {
+        .hero-grid { grid-template-columns: 1fr; }
+        .evm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .card.wide { grid-column: 1 / -1; }
+      }
+      @media (max-width: 880px) {
+        body.evm-nav-open { overflow: hidden; }
+        .evm-shell { grid-template-columns: 1fr; width: 100%; overflow: hidden; }
+        .evm-sidebar {
+          width: min(320px, 86vw);
+          height: 100vh;
+          height: 100dvh;
+          overflow-y: auto;
+          transform: translateX(-105%);
+          visibility: hidden;
+          pointer-events: none;
+          box-shadow: 24px 0 80px rgba(0, 0, 0, 0.45);
+          -webkit-overflow-scrolling: touch;
+          transition: transform 180ms ease, visibility 0s linear 180ms;
+        }
+        body.evm-nav-open .evm-sidebar {
+          transform: translateX(0);
+          visibility: visible;
+          pointer-events: auto;
+          transition-delay: 0s;
+        }
+        .evm-workspace { grid-column: 1; width: 100%; }
+        .evm-menu-button { display: block; }
+        .evm-scrim {
+          position: fixed;
+          inset: 0;
+          z-index: 25;
+          display: block;
+          background: rgba(2, 5, 13, 0.68);
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          touch-action: none;
+          transition: opacity 180ms ease, visibility 0s linear 180ms;
+        }
+        body.evm-nav-open .evm-scrim {
+          opacity: 1;
+          visibility: visible;
+          pointer-events: auto;
+          transition-delay: 0s;
+        }
+      }
+      @media (max-width: 680px) {
+        .evm-topbar { min-height: 72px; padding: 11px 14px; }
+        .topbar-actions .topbar-link { display: none; }
+        .topbar-state { max-width: 138px; }
+        .topbar-state span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .evm-main { padding: 20px 14px 38px; }
+        .hero, .card { border-radius: 17px; }
+        .hero { padding: 21px; }
+        h1 { font-size: clamp(2.35rem, 13vw, 3.7rem); }
+        .metrics, .evm-grid { grid-template-columns: 1fr; }
+        .card.wide { grid-column: auto; }
+        .evm-footer { flex-direction: column; padding: 22px 14px 30px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <div class="evm-shell">
+      <aside class="evm-sidebar" id="evm-sidebar">
+        <a class="brand" href="#overview" aria-label="IPI EVM View overview">
+          <span class="brand-mark" aria-hidden="true">
+            <img src="https://scan.ipi.io/ipi-logo.svg?v=official-x-20260715" alt="">
+          </span>
+          <span><strong>IPI EVM</strong><small>Testnet View</small></span>
+        </a>
+
+        <nav class="main-nav" aria-label="IPI public navigation">
+          <a href="https://scan.ipi.io/"><span class="nav-icon">⌕</span><span>IPI Scan</span></a>
+          <a href="https://wallet.ipi.io/"><span class="nav-icon">◫</span><span>Wallet</span></a>
+          <a href="https://faucet-testnet.ipi.io/"><span class="nav-icon">◈</span><span>Faucet</span></a>
+          <a href="https://status-testnet.ipi.io/"><span class="nav-icon">◉</span><span>Network status</span></a>
+          <a class="active" href="#overview" aria-current="page"><span class="nav-icon">⬡</span><span>EVM view</span></a>
+        </nav>
+
+        <div class="sidebar-card">
+          <div class="network-row"><span class="live-dot" id="sidebar-live-dot"></span><span>Chain 42424</span></div>
+          <strong id="sidebar-block">...</strong>
+          <small>latest EVM block · refresh 15s</small>
+        </div>
+        <div class="sidebar-links">
+          <a href="https://evm-rpc-testnet.ipi.io/">RPC</a>
+          <a href="https://status-testnet.ipi.io/">Status</a>
+          <a href="https://scan.ipi.io/">Scan</a>
+        </div>
+      </aside>
+
+      <div class="evm-workspace">
+        <header class="evm-topbar">
+          <button
+            class="evm-menu-button"
+            id="evm-menu-button"
+            type="button"
+            aria-label="Open navigation"
+            aria-controls="evm-sidebar"
+            aria-expanded="false"
+          ><span></span><span></span><span></span></button>
+          <div class="topbar-copy">
+            <strong>IPI EVM View</strong>
+            <small>JSON-RPC telemetry · Chain ID 42424</small>
+          </div>
+          <div class="topbar-actions">
+            <div class="topbar-state"><span class="live-dot" id="topbar-live-dot"></span><span id="topbar-status-label">Loading EVM data</span></div>
+            <a class="topbar-link" href="https://scan.ipi.io/">Unified Scan</a>
+          </div>
+        </header>
+
+        <main class="evm-main" id="overview">
+          <section class="hero">
+            <div class="hero-grid">
+              <div class="hero-copy">
+                <span class="eyebrow">IPI Testnet · EVM execution</span>
+                <h1>Chain 42424, live at the edge.</h1>
+                <p>
+                  Current EVM head, block details, gas price, faucet liquidity,
+                  and public JSON-RPC access in the same interface as IPI Scan.
+                </p>
+                <span class="status" id="overall-status">Loading EVM data</span>
+              </div>
+              <div class="metrics">
+                <div class="metric">
+                  <span class="metric-label">EVM head</span>
+                  <div class="metric-value mono" id="hero-block">...</div>
+                  <div class="metric-sub">Latest public block</div>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">Gas price</span>
+                  <div class="metric-value mono" id="hero-gas">...</div>
+                  <div class="metric-sub">Live JSON-RPC value</div>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">Faucet treasury</span>
+                  <div class="metric-value mono" id="hero-faucet">...</div>
+                  <div class="metric-sub">Available native IPI</div>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">Active alerts</span>
+                  <div class="metric-value mono" id="hero-alerts">...</div>
+                  <div class="metric-sub">Prometheus alert count</div>
+                </div>
+              </div>
+            </div>
+            <div class="pillset">
+              <span class="pill">EVM chain ID: <span class="mono" id="chain-id">42424</span></span>
+              <span class="pill">Network ID: <span class="mono" id="network-id">42424</span></span>
+              <span class="pill">Native currency: <span class="mono">IPI</span></span>
+              <span class="pill">RPC: <span class="mono">evm-rpc-testnet.ipi.io</span></span>
+            </div>
+          </section>
+
+          <section class="evm-grid" aria-label="EVM network data">
+            <article class="card">
+              <h2>Latest EVM block</h2>
+              <p>Current head as observed through the public JSON-RPC.</p>
+              <div class="meta">
+                <div class="row"><span class="label">Block number</span><span class="value mono" id="block-number">...</span></div>
+                <div class="row"><span class="label">Block hash</span><span class="value mono small" id="block-hash">...</span></div>
+                <div class="row"><span class="label">Timestamp</span><span class="value" id="block-time">...</span></div>
+                <div class="row"><span class="label">Transactions</span><span class="value mono" id="tx-count">...</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <h2>Fee market</h2>
+              <p>Current gas hints from the live EVM execution layer.</p>
+              <div class="meta">
+                <div class="row"><span class="label">Gas price · wei</span><span class="value mono" id="gas-price-wei">...</span></div>
+                <div class="row"><span class="label">Gas price</span><span class="value" id="gas-price-gwei">...</span></div>
+                <div class="row"><span class="label">Base fee</span><span class="value mono" id="base-fee">...</span></div>
+                <div class="row"><span class="label">Native gas coin</span><span class="value">IPI</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <h2>Launch surface</h2>
+              <p>Support state for testing transactions on chain 42424.</p>
+              <div class="meta">
+                <div class="row"><span class="label">Active alerts</span><span class="value mono" id="active-alerts">...</span></div>
+                <div class="row"><span class="label">Faucet treasury</span><span class="value" id="faucet-balance">...</span></div>
+                <div class="row"><span class="label">Public edge</span><span class="value">Cloudflare Tunnel</span></div>
+                <div class="row"><span class="label">Release mode</span><span class="value">EVM lite</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <h2>Cross links</h2>
+              <p>Move between the unified explorer and network tools.</p>
+              <div class="meta">
+                <div class="row"><span class="label">Unified scan</span><span class="value"><a class="link" href="https://scan.ipi.io/">Open</a></span></div>
+                <div class="row"><span class="label">Wallet gateway</span><span class="value"><a class="link" href="https://wallet.ipi.io/">Open</a></span></div>
+                <div class="row"><span class="label">Network status</span><span class="value"><a class="link" href="https://status-testnet.ipi.io/">Open</a></span></div>
+                <div class="row"><span class="label">Faucet</span><span class="value"><a class="link" href="https://faucet-testnet.ipi.io/">Open</a></span></div>
+              </div>
+            </article>
+
+            <article class="card wide">
+              <h2>JSON-RPC access</h2>
+              <p>Direct endpoints for external tools and manual inspection.</p>
+              <div class="actions">
+                <a class="link primary" href="https://evm-rpc-testnet.ipi.io/">HTTP RPC</a>
+                <a class="link" href="https://evm-rpc-testnet.ipi.io/ws">WebSocket RPC</a>
+                <a class="link" href="https://scan.ipi.io/">Unified Scan</a>
+                <a class="link" href="https://rpc-testnet.ipi.io/status">Comet RPC Status</a>
+              </div>
+            </article>
+          </section>
+        </main>
+
+        <footer class="evm-footer">
+          <span>IPI Testnet · EVM Chain ID 42424 · Native currency IPI</span>
+          <span><a href="https://scan.ipi.io/">Open IPI Scan</a> · <a href="https://status-testnet.ipi.io/">Network status</a></span>
+        </footer>
+      </div>
+
+      <div class="evm-scrim" id="evm-scrim" aria-hidden="true"></div>
+    </div>
+
+    <script>
+      const evmMenuButton = document.getElementById("evm-menu-button");
+      const evmSidebar = document.getElementById("evm-sidebar");
+      const evmScrim = document.getElementById("evm-scrim");
+      const statusEl = document.getElementById("overall-status");
+      const topbarLiveDot = document.getElementById("topbar-live-dot");
+      const sidebarLiveDot = document.getElementById("sidebar-live-dot");
+      const topbarStatusLabel = document.getElementById("topbar-status-label");
+
+      function setEvmNavigationOpen(open) {
+        document.body.classList.toggle("evm-nav-open", open);
+        evmMenuButton.setAttribute("aria-expanded", String(open));
+        evmMenuButton.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+      }
+
+      function closeEvmNavigation() {
+        setEvmNavigationOpen(false);
+      }
+
+      evmMenuButton.addEventListener("click", () => {
+        setEvmNavigationOpen(!document.body.classList.contains("evm-nav-open"));
+      });
+      evmScrim.addEventListener("click", closeEvmNavigation);
+      evmSidebar.addEventListener("click", (event) => {
+        if (event.target.closest("a")) closeEvmNavigation();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeEvmNavigation();
+      });
+
+      function setStatus(kind, text) {
+        statusEl.className = `status ${kind}`;
+        statusEl.textContent = text;
+        topbarStatusLabel.textContent = text;
+        topbarLiveDot.classList.toggle("warn", kind === "warn");
+        topbarLiveDot.classList.toggle("bad", kind === "bad");
+        sidebarLiveDot.classList.toggle("warn", kind === "warn");
+        sidebarLiveDot.classList.toggle("bad", kind === "bad");
+      }
+
+      function shorten(value) {
+        if (!value) return "n/a";
+        return value.length > 24 ? `${value.slice(0, 12)}...${value.slice(-8)}` : value;
+      }
+
+      function hexToNumber(hex) {
+        return Number.parseInt(hex, 16);
+      }
+
+      function hexToBigInt(hex) {
+        return BigInt(hex);
+      }
+
+      function formatDateFromHexSeconds(hex) {
+        const seconds = hexToNumber(hex);
+        if (Number.isNaN(seconds)) return "n/a";
+        return new Date(seconds * 1000).toLocaleString("en-US");
+      }
+
+      function formatGwei(hex) {
+        const wei = hexToBigInt(hex);
+        const whole = wei / 1000000000n;
+        const frac = (wei % 1000000000n).toString().padStart(9, "0").replace(/0+$/, "");
+        return frac ? `${whole}.${frac} gwei` : `${whole} gwei`;
+      }
+
+      function formatIpi(amountAipi) {
+        const value = BigInt(amountAipi);
+        const whole = value / 1000000000000000000n;
+        const fractional = (value % 1000000000000000000n).toString().padStart(18, "0").replace(/0+$/, "").slice(0, 4);
+        return fractional ? `${whole}.${fractional} IPI` : `${whole} IPI`;
+      }
+
+      async function rpc(method, params) {
+        const response = await fetch("/api/evm/rpc", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })
+        });
+        if (!response.ok) throw new Error(`RPC ${method} failed with ${response.status}`);
+        const payload = await response.json();
+        if (payload.error) throw new Error(payload.error.message || `RPC ${method} error`);
+        return payload.result;
+      }
+
+      async function load() {
+        try {
+          const [chainId, networkId, blockNumber, gasPrice, faucetRes, alertsRes] = await Promise.all([
+            rpc("eth_chainId", []),
+            rpc("net_version", []),
+            rpc("eth_blockNumber", []),
+            rpc("eth_gasPrice", []),
+            fetch("/api/rest/faucet-balance"),
+            fetch("/api/monitor/prometheus/alerts")
+          ]);
+          if (!faucetRes.ok || !alertsRes.ok) throw new Error("EVM page support routes returned a non-200 response");
+
+          const block = await rpc("eth_getBlockByNumber", [blockNumber, false]);
+          const faucet = await faucetRes.json();
+          const alerts = await alertsRes.json();
+          const alertCount = Array.isArray(alerts.data?.alerts) ? alerts.data.alerts.length : 0;
+          const numericBlock = hexToNumber(blockNumber).toString();
+          const formattedGas = formatGwei(gasPrice);
+          const formattedFaucet = formatIpi(faucet.balance?.amount || "0");
+
+          document.getElementById("chain-id").textContent = hexToNumber(chainId).toString();
+          document.getElementById("network-id").textContent = networkId;
+          document.getElementById("block-number").textContent = numericBlock;
+          document.getElementById("sidebar-block").textContent = numericBlock;
+          document.getElementById("hero-block").textContent = numericBlock;
+          document.getElementById("block-hash").textContent = shorten(block.hash);
+          document.getElementById("block-time").textContent = formatDateFromHexSeconds(block.timestamp);
+          document.getElementById("tx-count").textContent = Array.isArray(block.transactions) ? block.transactions.length.toString() : "0";
+          document.getElementById("gas-price-wei").textContent = gasPrice;
+          document.getElementById("gas-price-gwei").textContent = formattedGas;
+          document.getElementById("hero-gas").textContent = formattedGas;
+          document.getElementById("base-fee").textContent = block.baseFeePerGas || "n/a";
+          document.getElementById("active-alerts").textContent = alertCount.toString();
+          document.getElementById("hero-alerts").textContent = alertCount.toString();
+          document.getElementById("faucet-balance").textContent = formattedFaucet;
+          document.getElementById("hero-faucet").textContent = formattedFaucet;
+
+          if (alertCount > 0) {
+            setStatus("warn", `Live EVM data loaded with ${alertCount} active alert(s)`);
+          } else {
+            setStatus("good", "Live EVM data healthy");
+          }
+        } catch (error) {
+          console.error(error);
+          setStatus("bad", "Live EVM data unavailable");
+        }
+      }
+
+      load();
+      setInterval(load, 15000);
+    </script>
+  </body>
+</html>

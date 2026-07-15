@@ -1,0 +1,22 @@
+schema: spec-driven
+
+context: |
+  Project: Official source for IPI Scan at scan.ipi.io.
+  Stack: Zero-dependency HTML, CSS, and browser JavaScript with a Node.js local preview server.
+  Data: Read-only public CometBFT RPC, Cosmos REST, and EVM JSON-RPC through same-origin API routes.
+  Branding: Use the name IPI and the repository's official IPI logo.
+  Constraints: Preserve current behavior and responsive UI unless a later approved change explicitly modifies them.
+  Security: Never commit credentials, private endpoints, wallet material, signing keys, or generated secrets.
+  Workflow: Use conventional commits and validate every OpenSpec change strictly.
+
+rules:
+  proposal:
+    - Include explicit non-goals and infrastructure impact.
+    - Keep each change isolated and reviewable.
+  design:
+    - Document public API dependencies and fallback behavior.
+    - Explain security and privacy boundaries.
+  specs:
+    - Use observable scenarios for explorer navigation and read-only data access.
+  tasks:
+    - Include syntax, local smoke, and strict OpenSpec validation.
