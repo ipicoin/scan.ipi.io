@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#080d1d">
+    <meta
+      name="description"
+      content="IPI Testnet explorer for blocks, transactions, accounts, validators, and EVM activity."
+    >
+    <title>IPI Scan — Testnet Explorer</title>
+    <link rel="icon" href="/ipi-logo.svg?v=official-x-20260715" type="image/svg+xml">
+    <link rel="stylesheet" href="/explorer.css?v=b0f7361e-logo1">
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <div class="shell">
+      <aside class="sidebar" id="sidebar">
+        <a class="brand" href="#/" aria-label="IPI Scan dashboard">
+          <span class="brand-mark" aria-hidden="true">
+            <img src="/ipi-logo.svg?v=official-x-20260715" alt="">
+          </span>
+          <span>
+            <strong>IPI Scan</strong>
+            <small>Testnet explorer</small>
+          </span>
+        </a>
+
+        <nav class="main-nav" aria-label="Explorer navigation">
+          <a href="#/" data-route="/">
+            <span class="nav-icon">⌂</span>
+            Overview
+          </a>
+          <a href="#/blocks" data-route="/blocks">
+            <span class="nav-icon">◇</span>
+            Blocks
+          </a>
+          <a href="#/transactions" data-route="/transactions">
+            <span class="nav-icon">↔</span>
+            Transactions
+          </a>
+          <a href="#/validators" data-route="/validators">
+            <span class="nav-icon">◎</span>
+            Validators
+          </a>
+          <a href="https://evm-scan-testnet.ipi.io/">
+            <span class="nav-icon">Ξ</span>
+            EVM view
+          </a>
+        </nav>
+
+        <div class="sidebar-card">
+          <div class="network-row">
+            <span class="live-dot" id="sidebar-live-dot"></span>
+            <span id="sidebar-network">Connecting</span>
+          </div>
+          <strong id="sidebar-height">—</strong>
+          <small>Latest block</small>
+        </div>
+
+        <div class="sidebar-links">
+          <a href="https://wallet.ipi.io/">Wallet</a>
+          <a href="https://faucet-testnet.ipi.io/">Faucet</a>
+          <a href="https://status-testnet.ipi.io/">Status</a>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <button
+            class="menu-button"
+            id="menu-button"
+            type="button"
+            aria-label="Open navigation"
+            aria-controls="sidebar"
+            aria-expanded="false"
+          >
+            <span></span><span></span><span></span>
+          </button>
+
+          <form class="search" id="global-search" role="search">
+            <span class="search-icon" aria-hidden="true"></span>
+            <input
+              id="search-input"
+              type="search"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Search address, tx/block hash, or block height"
+              aria-label="Search the IPI testnet"
+            >
+            <button type="submit">Search</button>
+          </form>
+
+          <div class="topbar-status" id="topbar-status">
+            <span class="live-dot"></span>
+            <span>Live</span>
+          </div>
+        </header>
+
+        <main id="app" tabindex="-1" aria-live="polite">
+          <section class="loading-page">
+            <div class="skeleton skeleton-title"></div>
+            <div class="metric-grid">
+              <div class="skeleton skeleton-card"></div>
+              <div class="skeleton skeleton-card"></div>
+              <div class="skeleton skeleton-card"></div>
+              <div class="skeleton skeleton-card"></div>
+            </div>
+          </section>
+        </main>
+
+        <footer>
+          <span>IPI Testnet · Chain ID <strong>ipi-testnet-1</strong></span>
+          <span>Data from live RPC and REST endpoints</span>
+        </footer>
+      </div>
+
+      <div class="scrim" id="scrim" aria-hidden="true"></div>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+
+    <script src="/explorer.js?v=f3628257" defer></script>
+  </body>
+</html>
