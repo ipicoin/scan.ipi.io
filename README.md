@@ -67,3 +67,9 @@ OpenSpec validation requires Node.js 20.19 or newer:
 The complete historical EVM address transaction list and ranked account list
 remain dependent on a future PostgreSQL-backed indexer and are not implemented
 in this repository.
+
+## License
+
+Licensed under [Apache License 2.0](LICENSE). The explorer is an independent
+verification interface, not evidence by itself that an endpoint or network is
+independently operated.
